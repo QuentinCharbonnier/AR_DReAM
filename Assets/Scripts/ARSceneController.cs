@@ -5,6 +5,9 @@ using GoogleARCore;
 
 public class ARSceneController : MonoBehaviour
 {
+
+    public Camera firstPersonCamera;
+
     // Start is called before the first frame update
     void Start() {
         QuitOnConnectionErrors();
@@ -19,6 +22,9 @@ public class ARSceneController : MonoBehaviour
             return;
         }
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
+        // Add to the end of Update()
+        ProcessTouches();
     }
 
     /// <summary>
@@ -57,6 +63,29 @@ public class ARSceneController : MonoBehaviour
                 AndroidJavaObject toastObject = toastClass.CallStatic<AndroidJavaObject>("makeText", unityActivity, message, 0);
                 toastObject.Call("show");
             }));
+        }
+    }
+
+
+    void ProcessTouches () {
+
+        // If the player has not touched the screen, we are done with this update.
+        Touch touch;
+        if (Input.touchCount != 1 || (touch = Input.GetTouch (0)).phase != TouchPhase.Began) {
+            return;
+        } 
+
+        // Raycast against the location the player touched to search for planes.
+        TrackableHit hit;
+        TrackableHitFlags raycastFilter = TrackableHitFlags.FeaturePointWithSurfaceNormal | TrackableHitFlags.PlaneWithinPolygon;
+
+        if (Frame.Raycast (touch.position.x, touch.position.y, raycastFilter, out hit)) {
+            // Use hit pose and camera pose to check if the out hit is a detected plane.
+            // If it is, no need to create the anchor.
+            if ((hit.Trackable is DetectedPlane)) {
+                DetectedPlane selectedPlane = hit.Trackable as DetectedPlane;
+                Debug.Log ("Selected plane centered at " + selectedPlane.CenterPose.position);
+            }
         }
     }
 }
